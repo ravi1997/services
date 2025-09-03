@@ -11,7 +11,7 @@ class SMSMessage(db.Model):
     task_id = db.Column(db.String(64), unique=True)
     correlation_id = db.Column(db.String(64), index=True)
     attempts = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), index=True, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def as_dict(self):
