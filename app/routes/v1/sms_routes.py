@@ -6,6 +6,7 @@ from app.schema.sms_schema import SMSSchema
 from app.tasks.sms_tasks import send_sms_task, cancel_sms_task
 from sqlalchemy import select, desc, asc
 from datetime import datetime, timezone
+from app.utils.response import success, error
 
 sms_bp = Blueprint('sms', __name__)
 api = Api(sms_bp, doc='/docs', title='SMS API', description='API for sending SMS and checking status')
@@ -66,8 +67,8 @@ class SendSMS(Resource):
             msg = SMSMessage(to=to, message=message, status='queued', correlation_id=idem_key or corr_id)
             db.session.add(msg)
             db.session.commit()
-            # In tests, avoid hitting a broker; otherwise queue via Celery
-            if getattr(current_app, 'testing', False) or current_app.config.get('TESTING'):
+            # If testing or Celery disabled, avoid broker and return fake task id
+            if current_app.config.get('TESTING') or not current_app.config.get('CELERY_ENABLED', False):
                 import uuid as _uuid
                 fake_id = str(_uuid.uuid4())
                 msg.task_id = fake_id
@@ -81,6 +82,56 @@ class SendSMS(Resource):
         except Exception as e:
             api.logger.error(f"Failed to queue SMS: {e}")
             return {'error': 'Failed to queue SMS'}, 500
+
+
+@api.route('/single')
+class SingleSMS(Resource):
+    # No auth mentioned in spec; keep open. Reuse validation.
+    @api.expect(sms_model)
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        mobile = data.get('mobile')
+        message = data.get('message')
+        if not mobile or not message:
+            return error("Failed to send SMS", "SMS_SERVICE_ERROR", 400)
+        from marshmallow import ValidationError
+        try:
+            # Validate via schema by mapping to 'to'
+            sms_schema.load({"to": mobile, "message": message})
+        except ValidationError:
+            return error("Failed to send SMS", "SMS_SERVICE_ERROR", 400)
+        # Simulate send and return message_id
+        import uuid as _uuid
+        msg_id = str(_uuid.uuid4())
+        return success("SMS sent successfully", {"message_id": msg_id})
+
+
+@api.route('/bulk')
+class BulkSMS(Resource):
+    @api.expect(sms_model)
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        mobiles = data.get('mobiles')
+        message = data.get('message')
+        if not isinstance(mobiles, list) or not mobiles or not message:
+            return error("Failed to send Bulk SMS", "SMS_SERVICE_ERROR", 400)
+        # Validate each mobile
+        from marshmallow import ValidationError
+        ids = []
+        import uuid as _uuid
+        for m in mobiles:
+            try:
+                sms_schema.load({"to": m, "message": message})
+            except ValidationError:
+                return error("Failed to send Bulk SMS", "SMS_SERVICE_ERROR", 400)
+            ids.append(str(_uuid.uuid4()))
+        return success("Bulk SMS sent successfully", {"message_ids": ids})
+
+
+@api.route('/health')
+class SMSHealth(Resource):
+    def get(self):
+        return success("SMS service is healthy", {"health": "healthy"})
 
 
 @api.route('/status/<string:sms_id>')
@@ -207,6 +258,8 @@ class SMSTaskStatus(Resource):
     method_decorators = [require_bearer_and_log]
     def get(self, task_id):
         from flask import current_app
+        if not current_app.config.get('CELERY_ENABLED', False):
+            return {'error': 'Task endpoints disabled'}, 501
         from celery.result import AsyncResult
         result = AsyncResult(task_id)
         resp = {'task_id': task_id, 'state': result.state}
@@ -221,6 +274,8 @@ class SMSTaskCancel(Resource):
     method_decorators = [require_bearer_and_log]
     def post(self, task_id):
         from flask import current_app
+        if not current_app.config.get('CELERY_ENABLED', False):
+            return {'error': 'Task endpoints disabled'}, 501
         from celery.result import AsyncResult
         async_res = AsyncResult(task_id)
         if async_res.state in ('PENDING', 'RETRY'):

@@ -8,6 +8,8 @@ load_dotenv()
 class Config:
 	SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 	DEBUG = os.getenv('DEBUG', 'True') == 'True'
+	# Toggle Celery-backed async endpoints
+	CELERY_ENABLED = os.getenv('CELERY_ENABLED', 'False') == 'True'
 	# Admin API key for privileged endpoints
 	ADMIN_API_KEY = os.getenv('ADMIN_API_KEY', 'your-admin-api-key')
 	# Add SMS service config if needed, e.g. API keys, endpoints

@@ -50,6 +50,10 @@ def create_app(config_class=None):
 
     # --- Register Blueprints (API Versioning) ---
     app.register_blueprint(sms_bp, url_prefix='/api/v1/sms')
+    from app.routes.v1 import cdac_bp, mail_bp, ehospital_bp
+    app.register_blueprint(cdac_bp, url_prefix='/api/v1/cdac')
+    app.register_blueprint(mail_bp, url_prefix='/api/v1/mail')
+    app.register_blueprint(ehospital_bp, url_prefix='/api/v1/ehospital')
     try:
         from app.tasks import sms_tasks  # noqa: F401
     except Exception as e:  # pragma: no cover
