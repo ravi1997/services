@@ -1,0 +1,22 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "app/__pycache__": true,
+        "app/routes/__pycache__": true,
+        "app/routes/v1/__pycache__": true,
+        "env": true,
+        ".vscode": true
+    },
+    "hide-files.files": [
+        "app/__pycache__",
+        "app/routes/__pycache__",
+        "app/routes/v1/__pycache__",
+        "env",
+        ".vscode"
+    ],
+    "chatgpt.openOnStartup": true
+}

@@ -1,0 +1,14 @@
+flask
+python-dotenv
+flask-restx
+flask-cors
+flask-limiter
+marshmallow
+celery
+redis
+pytest
+pytest-flask
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-requests
