@@ -1,0 +1,13 @@
+/.env
+/env
+/logs
+/postman.json
+**/logs
+**/app/__pycache__
+**/app/routes/__pycache__
+**/app/routes/v1/__pycache__
+**/env
+**/.vscode
+**/.env
+**/.venv
+**/__pycache__/**

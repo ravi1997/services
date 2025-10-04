@@ -1,0 +1,262 @@
+{
+	"info": {
+		"_postman_id": "ee0c4c66-03a1-41b1-985c-b7db196bd06c",
+		"name": "AIIMS Services API",
+		"description": "SMS service with single, bulk, admin, health, metrics, and CDAC endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "25872699"
+	},
+	"item": [
+		{
+			"name": "Core",
+			"item": [
+				{
+					"name": "Global Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/metrics",
+							"host": ["{{base_url}}"],
+							"path": ["metrics"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "CDAC",
+			"item": [
+				{
+					"name": "CDAC Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cdac/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cdac", "health"]
+						},
+						"description": "Check CDAC service health. Optional query param: fail=1"
+					},
+					"response": []
+				},
+				{
+					"name": "CDAC Fetch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{cdac_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"request_id\": \"12345\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/cdac/fetch",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cdac", "fetch"]
+						},
+						"description": "Fetch single CDAC record by request_id."
+					},
+					"response": []
+				},
+				{
+					"name": "CDAC Bulk Fetch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{cdac_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"request_ids\": [\"12345\", \"67890\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/cdac/bulk_fetch",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cdac", "bulk_fetch"]
+						},
+						"description": "Fetch multiple CDAC records by request_ids."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SMS",
+			"item": [
+				{
+					"name": "Send Single SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{sms_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mobile\": \"+15551234567\",\n  \"message\": \"Hello from AIIMS\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/single",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "single"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Single SMS (Idempotent)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{sms_token}}"},
+							{"key": "Idempotency-Key", "value": "{{idempotency_key}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mobile\": \"+15551234567\",\n  \"message\": \"Idempotent Hello\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/single",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "single"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Bulk SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{sms_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mobiles\": [\"+15551234567\", \"+15557654321\"],\n  \"message\": \"Bulk greeting\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/bulk",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "bulk"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SMS Internal Health (Provider Touch)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{sms_token}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "health"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "List Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/messages?per_page=10&order=desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "messages"],
+							"query": [
+								{"key": "per_page", "value": "10"},
+								{"key": "order", "value": "desc"}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Message Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/status/{{record_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "status", "{{record_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Task Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "tasks", "{{task_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sms/tasks/{{task_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sms", "tasks", "{{task_id}}", "cancel"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{"key": "base_url", "value": "http://localhost:5000"},
+		{"key": "sms_token", "value": "your-sms-api-key"},
+		{"key": "admin_token", "value": "your-admin-api-key"},
+		{"key": "cdac_token", "value": "your-cdac-api-key"},
+		{"key": "idempotency_key", "value": "demo-key-123"},
+		{"key": "task_id", "value": ""},
+		{"key": "record_id", "value": "1"}
+	]
+}
