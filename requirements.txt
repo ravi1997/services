@@ -17,3 +17,6 @@ opentelemetry-sdk==1.36.0
 opentelemetry-instrumentation-flask==0.57b0
 opentelemetry-instrumentation-requests==0.57b0
 phonenumbers==8.13.50
+cryptography==43.0.1
+tenacity==9.0.0
+gunicorn==23.0.0

@@ -137,7 +137,7 @@ class SingleSMS(Resource):
                     row = db.session.execute(
                         select(SMSMessage).where(SMSMessage.id == record.id).with_for_update()
                     ).scalar_one()
-                    if status == 200:
+                    if status[0] == 200:
                         row.status = 'sent'
                         sms_sent_counter.inc()
                         logging.getLogger('sms').info(f"Single SMS sent directly to {mobile}")
@@ -156,7 +156,7 @@ class SingleSMS(Resource):
                 row = db.session.execute(
                     select(SMSMessage).where(SMSMessage.id == record.id).with_for_update()
                 ).scalar_one()
-                if status == 200:
+                if status[0] == 200:
                     row.status = 'sent'
                     sms_sent_counter.inc()
                     logging.getLogger('sms').info(f"Single SMS sent directly to {mobile}")
@@ -302,7 +302,6 @@ class SMSHealth(Resource):
                 return error("Health check failed", "HEALTH_CHECK_ERROR", 500)
         else:
             # Direct health check if no Celery
-            from app.utils.sms_util import fernet  # Just import to see if config is valid
             if current_app.config.get('OTP_FLAG', True):
                 if current_app.config.get('OTP_SERVER') and current_app.config.get('OTP_USERNAME'):
                     logging.getLogger('app').info("Direct health check: configuration OK")
