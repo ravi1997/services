@@ -67,7 +67,7 @@ def require_bearer_and_log(route_func):
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         # Token format validation (simple: length, chars, not default)
         import re
-        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}, token):
+        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}', token):
             logger.warning(f"Malformed token for {ip} on {request.path}")
             audit_logger.warning(f"Malformed token: ip={ip}, path={request.path}, token={token}")
             return error("Malformed token", "UNAUTHORIZED", 401)
@@ -128,7 +128,7 @@ def require_admin_bearer_and_log(route_func):
             logger.error("Missing ADMIN_API_KEY in config")
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         import re
-        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}, token):
+        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}', token):
             logger.warning(f"Malformed admin token for {ip} on {request.path}")
             audit_logger.warning(f"Malformed admin token: ip={ip}, path={request.path}, token={token}")
             return error("Malformed token", "UNAUTHORIZED", 401)

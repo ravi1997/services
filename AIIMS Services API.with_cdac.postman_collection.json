@@ -1,11 +1,39 @@
 {
 	"info": {
-		"_postman_id": "ee0c4c66-03a1-41b1-985c-b7db196bd06c",
-		"name": "AIIMS Services API",
-		"description": "SMS service with single, bulk, admin, health, metrics, and CDAC endpoints.",
+		"name": "AIIMS Services - Full API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "25872699"
+		"description": "Collection to exercise SMS, Email, CDAC and eHospital endpoints, admin/task actions, health and metrics."
 	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		},
+		{
+			"key": "sms_token",
+			"value": "your-sms-token"
+		},
+		{
+			"key": "admin_token",
+			"value": "your-admin-token"
+		},
+		{
+			"key": "idempotency_key",
+			"value": "demo-idempotency-123"
+		},
+		{
+			"key": "correlation_id",
+			"value": ""
+		},
+		{
+			"key": "task_id",
+			"value": ""
+		},
+		{
+			"key": "record_id",
+			"value": "1"
+		}
+	],
 	"item": [
 		{
 			"name": "Core",
@@ -15,87 +43,16 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{base_url}}/health",
-							"host": ["{{base_url}}"],
-							"path": ["health"]
-						}
-					},
-					"response": []
+						"url": "{{base_url}}/health"
+					}
 				},
 				{
 					"name": "Metrics",
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": {
-							"raw": "{{base_url}}/metrics",
-							"host": ["{{base_url}}"],
-							"path": ["metrics"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "CDAC",
-			"item": [
-				{
-					"name": "CDAC Health",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/v1/cdac/health",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "cdac", "health"]
-						},
-						"description": "Check CDAC service health. Optional query param: fail=1"
-					},
-					"response": []
-				},
-				{
-					"name": "CDAC Fetch",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{cdac_token}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"request_id\": \"12345\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/cdac/fetch",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "cdac", "fetch"]
-						},
-						"description": "Fetch single CDAC record by request_id."
-					},
-					"response": []
-				},
-				{
-					"name": "CDAC Bulk Fetch",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{cdac_token}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"request_ids\": [\"12345\", \"67890\"]\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/cdac/bulk_fetch",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "cdac", "bulk_fetch"]
-						},
-						"description": "Fetch multiple CDAC records by request_ids."
-					},
-					"response": []
+						"url": "{{base_url}}/metrics"
+					}
 				}
 			]
 		},
@@ -107,156 +64,396 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{sms_token}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"mobile\": \"+15551234567\",\n  \"message\": \"Hello from AIIMS\"\n}"
+							"raw": "{\n  \"mobile\": \"+911234567890\",\n  \"message\": \"Hello from AIIMS\"\n}"
 						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/single",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "single"]
-						}
-					},
-					"response": []
+						"url": "{{base_url}}/services/api/v1/sms/single"
+					}
 				},
 				{
 					"name": "Send Single SMS (Idempotent)",
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{sms_token}}"},
-							{"key": "Idempotency-Key", "value": "{{idempotency_key}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotency_key}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"mobile\": \"+15551234567\",\n  \"message\": \"Idempotent Hello\"\n}"
+							"raw": "{\n  \"mobile\": \"+911234567890\",\n  \"message\": \"Idempotent Hello\"\n}"
 						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/single",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "single"]
-						}
-					},
-					"response": []
+						"url": "{{base_url}}/services/api/v1/sms/single"
+					}
 				},
 				{
 					"name": "Send Bulk SMS",
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{sms_token}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"mobiles\": [\"+15551234567\", \"+15557654321\"],\n  \"message\": \"Bulk greeting\"\n}"
+							"raw": "{\n  \"mobiles\": [\"+911234567890\", \"+911098765432\"],\n  \"message\": \"Bulk Hello from AIIMS\"\n}"
 						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/bulk",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "bulk"]
-						}
-					},
-					"response": []
+						"url": "{{base_url}}/services/api/v1/sms/bulk"
+					}
 				},
 				{
-					"name": "SMS Internal Health (Provider Touch)",
+					"name": "SMS Health",
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "Authorization", "value": "Bearer {{sms_token}}"}
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
 						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/health",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "health"]
-						}
-					},
-					"response": []
+						"url": "{{base_url}}/services/api/v1/sms/health"
+					}
 				}
 			]
 		},
 		{
-			"name": "Admin",
+			"name": "Email",
 			"item": [
 				{
-					"name": "List Messages",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/messages?per_page=10&order=desc",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "messages"],
-							"query": [
-								{"key": "per_page", "value": "10"},
-								{"key": "order", "value": "desc"}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Message Status",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/status/{{record_id}}",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "status", "{{record_id}}"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Task Status",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/tasks/{{task_id}}",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "tasks", "{{task_id}}"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Cancel Task",
+					"name": "Send Single Email",
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Authorization", "value": "Bearer {{admin_token}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
 						],
-						"url": {
-							"raw": "{{base_url}}/api/v1/sms/tasks/{{task_id}}/cancel",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "sms", "tasks", "{{task_id}}", "cancel"]
-						}
-					},
-					"response": []
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"recipient@example.com\",\n  \"subject\": \"Test Email\",\n  \"body\": \"This is a test email.\",\n  \"correlation_id\": \"{{correlation_id}}\"\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/mail/single"
+					}
+				},
+				{
+					"name": "Send Single Email (Idempotent)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{idempotency_key}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"recipient@example.com\",\n  \"subject\": \"Idempotent Email\",\n  \"body\": \"Idempotent body\"\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/mail/single"
+					}
+				},
+				{
+					"name": "Send Bulk Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": [\"recipient1@example.com\", \"recipient2@example.com\"],\n  \"subject\": \"Bulk Subject\",\n  \"body\": \"Bulk body content\"\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/mail/bulk"
+					}
+				},
+				{
+					"name": "Email Health",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/mail/health"
+					}
+				}
+			]
+		},
+		{
+			"name": "CDAC",
+			"item": [
+				{
+					"name": "CDAC Fetch (single)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"request_id\": \"employee_123\"\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/cdac/fetch"
+					}
+				},
+				{
+					"name": "CDAC Bulk Fetch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"request_ids\": [\"employee_123\", \"employee_456\"]\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/cdac/bulk_fetch"
+					}
+				},
+				{
+					"name": "CDAC Health",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/cdac/health"
+					}
+				}
+			]
+		},
+		{
+			"name": "eHospital",
+			"item": [
+				{
+					"name": "Patient Details Fetch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"uhid\": \"1234567890\"\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/ehospital/patient"
+					}
+				},
+				{
+					"name": "Bulk Patient Details Fetch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"uhids\": [\"1234567890\", \"0987654321\"]\n}"
+						},
+						"url": "{{base_url}}/services/api/v1/ehospital/bulk_patient"
+					}
+				},
+				{
+					"name": "eHospital Health",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{sms_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/ehospital/health"
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin (SMS & Email)",
+			"item": [
+				{
+					"name": "List SMS Messages (admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/sms/messages?per_page=20&page=1"
+					}
+				},
+				{
+					"name": "SMS Message Status (admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/sms/status/{{record_id}}"
+					}
+				},
+				{
+					"name": "SMS Task Status (admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/sms/tasks/{{task_id}}"
+					}
+				},
+				{
+					"name": "Cancel SMS Task (admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/sms/tasks/{{task_id}}/cancel"
+					}
+				},
+				{
+					"name": "List Email Messages (admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/mail/messages?per_page=20&page=1"
+					}
+				},
+				{
+					"name": "Email Message Status (admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/mail/status/{{record_id}}"
+					}
+				},
+				{
+					"name": "Email Task Status (admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/mail/tasks/{{task_id}}"
+					}
+				},
+				{
+					"name": "Cancel Email Task (admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": "{{base_url}}/services/api/v1/mail/tasks/{{task_id}}/cancel"
+					}
 				}
 			]
 		}
-	],
-	"variable": [
-		{"key": "base_url", "value": "http://localhost:5000"},
-		{"key": "sms_token", "value": "your-sms-api-key"},
-		{"key": "admin_token", "value": "your-admin-api-key"},
-		{"key": "cdac_token", "value": "your-cdac-api-key"},
-		{"key": "idempotency_key", "value": "demo-key-123"},
-		{"key": "task_id", "value": ""},
-		{"key": "record_id", "value": "1"}
 	]
 }

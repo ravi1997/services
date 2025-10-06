@@ -15,6 +15,8 @@ class Config:
 
 	# Rate limiting
 	DEFAULT_RATE_LIMIT = os.getenv('DEFAULT_RATE_LIMIT', '30 per minute')
+	# Rate limit storage (used by Flask-Limiter). Default to Redis on localhost (db 2)
+	RATELIMIT_STORAGE_URI = os.getenv('RATELIMIT_STORAGE_URI', 'redis://localhost:6379/2')
 
 	# Celery / Redis (optional async queue)
 	CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')

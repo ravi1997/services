@@ -53,7 +53,8 @@ def create_app(config_class=None):
         return resp
 
     # Rate Limiter
-    limiter.init_app(app)
+    from app.extensions import init_limiter
+    init_limiter(app)
     app.limiter = limiter
 
     # Database

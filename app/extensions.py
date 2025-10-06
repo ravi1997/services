@@ -8,7 +8,19 @@ import os
 
 # Initialize extensions
 db = SQLAlchemy()
-limiter = Limiter(key_func=get_remote_address)
+# Limiter instance (will be initialized with storage when the app is available)
+limiter = Limiter(key_func=get_remote_address, headers_enabled=True)
+
+
+def init_limiter(app):
+    """Initialize the Flask-Limiter with storage from app config.
+    This avoids the in-memory storage warning when a proper Redis URI is set.
+    """
+    storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or os.getenv('RATELIMIT_STORAGE_URI')
+    if storage_uri:
+        # Configure limiter to use the provided storage
+        app.config['RATELIMIT_STORAGE_URI'] = storage_uri
+    limiter.init_app(app)
 
 # Metrics
 sms_sent_counter = Counter('sms_sent_total', 'Total SMS successfully sent')
