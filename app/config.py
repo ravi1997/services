@@ -43,6 +43,14 @@ class Config:
 	# Allow access to CDAC API (can be set to False to disable)
 	CAN_ACCESS_CDAC = os.getenv('CAN_ACCESS_CDAC', 'True') == 'True'
  
+	# Email configuration
+	SMTP_SERVER = os.getenv('SMTP_SERVER', 'localhost')
+	SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
+	SMTP_USERNAME = os.getenv('SMTP_USERNAME')
+	SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+	SMTP_FROM_EMAIL = os.getenv('SMTP_FROM_EMAIL', 'noreply@example.com')
+	SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'True') == 'True'
+
 
 class DevelopmentConfig(Config):
 	DEBUG = True

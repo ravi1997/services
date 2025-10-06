@@ -6,6 +6,7 @@ from flask import Flask, request, g
 from flask_cors import CORS
 from app.routes.v1 import sms_bp, cdac_bp, mail_bp, ehospital_bp
 from app.routes.v1.sms_admin_routes import sms_admin_bp
+from app.routes.v1.email_admin_routes import email_admin_bp
 from app.routes.v1.maintenance_routes import maintenance_bp
 from app.extensions import db, limiter, init_logging
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
@@ -85,6 +86,7 @@ def create_app(config_class=None):
     app.register_blueprint(mail_bp, url_prefix='/services/api/v1/mail')
     app.register_blueprint(ehospital_bp, url_prefix='/services/api/v1/ehospital')
     app.register_blueprint(sms_admin_bp, url_prefix='/services/api/v1/sms')
+    app.register_blueprint(email_admin_bp, url_prefix='/services/api/v1/mail')
     app.register_blueprint(maintenance_bp, url_prefix='/services/api/v1')
 
     # Log app initialization

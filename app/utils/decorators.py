@@ -6,15 +6,19 @@ from app.utils.response import error
 def require_bearer_and_log(route_func):
     @wraps(route_func)
     def wrapper(*args, **kwargs):
-        logger = logging.getLogger('access_logger')
-        audit_logger = logging.getLogger('audit_logger')
+        logger = logging.getLogger('access')
+        audit_logger = logging.getLogger('app')  # Using app logger for audit logs
         
-        # Determine if this is an SMS endpoint to apply specific rate limits
+        # Determine if this is an SMS or email endpoint to apply specific rate limits
         is_single_sms = request.path.endswith('/single') and 'sms' in request.path
         is_bulk_sms = request.path.endswith('/bulk') and 'sms' in request.path
         is_health_sms = request.path.endswith('/health') and 'sms' in request.path
         
-        # SMS-specific rate limiting
+        is_single_email = request.path.endswith('/send') and 'mail' in request.path and request.method == 'POST'
+        is_bulk_email = request.path.endswith('/bulk_send') and 'mail' in request.path and request.method == 'POST'
+        is_health_email = request.path.endswith('/health') and 'mail' in request.path and request.method == 'GET'
+        
+        # Rate limiting based on endpoint type
         if is_single_sms:
             # Single SMS: 200 per minute
             limit = 200
@@ -22,7 +26,16 @@ def require_bearer_and_log(route_func):
             # Bulk SMS: 10 per minute
             limit = 10
         elif is_health_sms:
-            # Health check: 5 per minute
+            # SMS Health check: 5 per minute
+            limit = 5
+        elif is_single_email:
+            # Single email: 200 per minute
+            limit = 200
+        elif is_bulk_email:
+            # Bulk email: 10 per minute
+            limit = 10
+        elif is_health_email:
+            # Email Health check: 5 per minute
             limit = 5
         else:
             # Default rate limit for other endpoints
@@ -48,13 +61,13 @@ def require_bearer_and_log(route_func):
         if auth_header.startswith('Bearer '):
             token = auth_header.split(' ', 1)[1]
         # Require config value, no fallback
-        expected_token = current_app.config.get('SMS_API_KEY')
+        expected_token = current_app.config.get('SMS_API_KEY')  # Using SMS_API_KEY as default, but could be extended
         if not expected_token:
-            logger.error("Missing SMS_API_KEY in config")
+            logger.error("Missing API key in config")
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         # Token format validation (simple: length, chars, not default)
         import re
-        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}$', token):
+        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}, token):
             logger.warning(f"Malformed token for {ip} on {request.path}")
             audit_logger.warning(f"Malformed token: ip={ip}, path={request.path}, token={token}")
             return error("Malformed token", "UNAUTHORIZED", 401)
@@ -88,8 +101,8 @@ def require_bearer_and_log(route_func):
 def require_admin_bearer_and_log(route_func):
     @wraps(route_func)
     def wrapper(*args, **kwargs):
-        logger = logging.getLogger('access_logger')
-        audit_logger = logging.getLogger('audit_logger')
+        logger = logging.getLogger('access')
+        audit_logger = logging.getLogger('app')  # Using app logger for audit logs
         ip = request.remote_addr
         # Admin rate limiting (per IP, 5 requests/minute)
         if not hasattr(current_app, 'admin_rate_limit'): current_app.admin_rate_limit = {}
@@ -115,7 +128,7 @@ def require_admin_bearer_and_log(route_func):
             logger.error("Missing ADMIN_API_KEY in config")
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         import re
-        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}$', token):
+        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}, token):
             logger.warning(f"Malformed admin token for {ip} on {request.path}")
             audit_logger.warning(f"Malformed admin token: ip={ip}, path={request.path}, token={token}")
             return error("Malformed token", "UNAUTHORIZED", 401)
