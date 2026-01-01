@@ -13,6 +13,8 @@ from sqlalchemy import select
 import time
 import logging
 
+from app.utils.sms_service import send_sms
+
 sms_bp = Blueprint('sms', __name__)
 api = Api(sms_bp, doc='/docs', title='SMS API', description='API for sending SMS and checking status')
 
@@ -56,12 +58,6 @@ def _get_ip_range():
         return real_ip
     return request.remote_addr
 
-def _check_ip_allowed():
-    """Check if the client IP is in the allowed range"""
-    client_ip = _get_ip_range()
-    if client_ip.startswith('192.168.14.'):
-        return True
-    return False
 
 @api.route('/single')
 class SingleSMS(Resource):
@@ -69,10 +65,6 @@ class SingleSMS(Resource):
     
     @api.expect(single_sms_model)
     def post(self):
-        # Check IP range
-        if not _check_ip_allowed():
-            logging.getLogger('access').error(f"Access denied from IP: {_get_ip_range()}")
-            return error("Access denied from this IP", "ACCESS_DENIED", 403)
         
         data = request.get_json(silent=True) or {}
         mobile = (data.get('mobile') or data.get('to') or '').strip()
@@ -173,10 +165,6 @@ class BulkSMS(Resource):
     
     @api.expect(bulk_sms_model)
     def post(self):
-        # Check IP range
-        if not _check_ip_allowed():
-            logging.getLogger('access').error(f"Access denied from IP: {_get_ip_range()}")
-            return error("Access denied from this IP", "ACCESS_DENIED", 403)
         
         data = request.get_json(silent=True) or {}
         mobiles: List[str] = data.get('mobiles') or data.get('to') or []
@@ -283,11 +271,6 @@ class BulkSMS(Resource):
 @api.route('/health')
 class SMSHealth(Resource):
     def get(self):
-        # Check IP range
-        if not _check_ip_allowed():
-            logging.getLogger('access').error(f"Health check access denied from IP: {_get_ip_range()}")
-            return error("Access denied from this IP", "ACCESS_DENIED", 403)
-        
         # Process as high priority health check
         celery = getattr(current_app, 'celery', None)
         if celery:
@@ -305,7 +288,13 @@ class SMSHealth(Resource):
             if current_app.config.get('OTP_FLAG', True):
                 if current_app.config.get('OTP_SERVER') and current_app.config.get('OTP_USERNAME'):
                     logging.getLogger('app').info("Direct health check: configuration OK")
-                    return success("SMS service is configured and ready", {"health": "healthy", "configured": True})
+                    status = send_sms("9899378106", "Health Check Test")
+                    if status == 200:
+                        logging.getLogger('app').info("Direct health check: SMS sent successfully")
+                        return success("SMS service is configured and ready", {"health": "healthy", "configured": True})
+                    else:
+                        logging.getLogger('app').error(f"Direct health check: SMS send failed with status {status}")
+                        return error("SMS service health check failed", "SMS_SERVICE_UNHEALTHY", 503)    
                 else:
                     logging.getLogger('app').error("Direct health check: missing configuration")
                     return error("SMS service configuration missing", "SMS_SERVICE_UNHEALTHY", 503)

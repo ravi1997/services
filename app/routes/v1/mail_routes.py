@@ -55,12 +55,16 @@ def _get_ip_range():
         return real_ip
     return request.remote_addr
 
+
 def _check_ip_allowed():
     """Check if the client IP is in the allowed range"""
     client_ip = _get_ip_range()
     if client_ip.startswith('192.168.14.'):
         return True
+    if client_ip.startswith('192.168.156.10'):
+        return True
     return False
+
 
 @api.route('/single')
 class SingleEmail(Resource):

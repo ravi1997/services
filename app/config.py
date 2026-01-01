@@ -45,6 +45,14 @@ class Config:
 	# Allow access to CDAC API (can be set to False to disable)
 	CAN_ACCESS_CDAC = os.getenv('CAN_ACCESS_CDAC', 'True') == 'True'
  
+	# eHospital API configuration
+	EHOSPITAL_INIT_URL = os.getenv('EHOSPITAL_INIT_URL', 'https://example-ehospital-api.com/init')
+	EHOSPITAL_FETCH_PATIENT_URL = os.getenv('EHOSPITAL_FETCH_PATIENT_URL', 'https://example-ehospital-api.com/fetchPatientFullDetails')
+	EHOSPITAL_USERNAME = os.getenv('EHOSPITAL_USERNAME', 'your-ehospital-username')
+	EHOSPITAL_PASSWORD = os.getenv('EHOSPITAL_PASSWORD', 'your-ehospital-password')
+	EHOSPITAL_HOSPITAL_ID = os.getenv('EHOSPITAL_HOSPITAL_ID', '1')
+ 
+ 
 	# Email configuration
 	SMTP_SERVER = os.getenv('SMTP_SERVER', 'localhost')
 	SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
@@ -52,6 +60,8 @@ class Config:
 	SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
 	SMTP_FROM_EMAIL = os.getenv('SMTP_FROM_EMAIL', 'noreply@example.com')
 	SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'True') == 'True'
+
+
 
 
 class DevelopmentConfig(Config):

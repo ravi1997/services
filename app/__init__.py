@@ -26,15 +26,69 @@ def create_app(config_class=None):
     app.config.from_object(config_class)
 
     # Custom CORS handling for IP range
+    # @app.after_request
+    # def after_request(response):
+    #     # Check if the request is from an allowed IP range
+    #     client_ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    #     if client_ip.startswith('192.168.14.'):
+    #         response.headers.add('Access-Control-Allow-Origin', '*')
+    #         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-ID,Idempotency-Key,X-Nonce,X-Role')
+    #         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    #     return response
+
+
+    # -----------------------------
+    # Allowed IPs / CIDRs
+    # -----------------------------
+    ALLOWED_IP_PREFIXES = (
+        "192.168.8.",
+    )
+
+    ALLOWED_IPS = {
+        "123.252.211.122",  # Opal Office
+        "45.64.84.98",      # Opal Office
+        "35.207.200.220",   # Aarogyam Instance (NAT)
+        "35.207.210.89",    # TVAK Instance (NAT)
+    }
+
+    def get_client_ip():
+        """
+        Resolve real client IP behind Nginx / LB.
+        """
+        xff = request.headers.get("X-Forwarded-For")
+        if xff:
+            # First IP is the original client
+            return xff.split(",")[0].strip()
+
+        return (
+            request.headers.get("X-Real-IP")
+            or request.remote_addr
+            or ""
+        )
+
+
     @app.after_request
     def after_request(response):
-        # Check if the request is from an allowed IP range
-        client_ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-        if client_ip.startswith('192.168.14.'):
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-ID,Idempotency-Key,X-Nonce,X-Role')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        client_ip = get_client_ip()
+
+        allowed = (
+            client_ip in ALLOWED_IPS
+            or any(client_ip.startswith(prefix) for prefix in ALLOWED_IP_PREFIXES)
+        )
+
+        if allowed:
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = (
+                "Content-Type, Authorization, X-Request-ID, "
+                "Idempotency-Key, X-Nonce, X-Role"
+            )
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, PUT, POST, DELETE, OPTIONS"
+            )
+
         return response
+
+
 
     # Logging
     init_logging(json_logs=False)

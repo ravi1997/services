@@ -67,9 +67,10 @@ def require_bearer_and_log(route_func):
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         # Token format validation (simple: length, chars, not default)
         import re
-        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}', token):
-            logger.warning(f"Malformed token for {ip} on {request.path}")
-            audit_logger.warning(f"Malformed token: ip={ip}, path={request.path}, token={token}")
+        if not token or token != expected_token:
+            logger.warning(f"Malformed token for {ip} on {request.path} there")
+            audit_logger.warning(
+                f"Malformed token: ip={ip}, path={request.path}, token={token} expected_token={expected_token}")
             return error("Malformed token", "UNAUTHORIZED", 401)
         # Replay protection (simple: nonce in token, not reused)
         nonce = request.headers.get('X-Nonce')
@@ -113,7 +114,7 @@ def require_admin_bearer_and_log(route_func):
         rl = current_app.admin_rate_limit.setdefault(ip, [])
         rl[:] = [t for t in rl if now-t < window]
         if len(rl) >= limit:
-            logger.warning(f"Admin rate limit exceeded for {ip} on {request.path}")
+            logger.warning(f"Admin rate limit exceeded for {ip} on {request.path} there.")
             audit_logger.warning(f"Admin rate limit exceeded: ip={ip}, path={request.path}, user_agent={request.headers.get('User-Agent')}")
             return error("Rate limit exceeded", "RATE_LIMIT", 429)
         rl.append(now)
@@ -128,9 +129,9 @@ def require_admin_bearer_and_log(route_func):
             logger.error("Missing ADMIN_API_KEY in config")
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         import re
-        if not token or not re.match(r'^[A-Za-z0-9\-_.]{16,}', token):
-            logger.warning(f"Malformed admin token for {ip} on {request.path}")
-            audit_logger.warning(f"Malformed admin token: ip={ip}, path={request.path}, token={token}")
+        if not token or token != expected_token:
+            logger.warning(f"Malformed admin token for {ip} on {request.path} here.")
+            audit_logger.warning(f"Malformed admin token: ip={ip}, path={request.path}, token={token} here.")
             return error("Malformed token", "UNAUTHORIZED", 401)
         # Replay protection
         nonce = request.headers.get('X-Nonce')

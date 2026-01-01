@@ -50,8 +50,7 @@ def call_third_party_api(search_key, access_token, api_url, key_type="emp_id", t
 	return None
 
 def validate_response_schema(data):
-	# Example: expect dict with 'status' and 'result' keys
-	return isinstance(data, dict) and 'status' in data and 'result' in data
+	return isinstance(data, dict) and 'Data' in data
 
 def cdac_service(emp_id: str, config=None, audit_logger=None) -> dict | str:
 	"""

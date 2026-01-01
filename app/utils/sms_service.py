@@ -1,5 +1,7 @@
 from flask import current_app as app
 import requests
+import re
+from time import time
 
 def send_sms(mobile, message):
     """
@@ -13,8 +15,7 @@ def send_sms(mobile, message):
         int: HTTP status code from the SMS service response.
     """
 
-    import re
-    from time import time
+
     app.logger.info("Preparing to send SMS via SOAP...")
 
     # Input validation
