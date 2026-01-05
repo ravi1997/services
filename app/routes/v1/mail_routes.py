@@ -85,6 +85,21 @@ class SingleEmail(Resource):
         
         if not to or not subject or not body:
             return error("Missing required fields: to, subject, and body are required", "EMAIL_SERVICE_ERROR", 400)
+            
+        # Sanitization and Validation
+        from app.utils.sanitization import sanitize_text, validate_safe_input
+        
+        is_safe_subj, reason_subj = validate_safe_input(subject, context="email_subject")
+        if not is_safe_subj:
+            return error(f"Invalid subject content: {reason_subj}", "SECURITY_VIOLATION", 400)
+            
+        is_safe_body, reason_body = validate_safe_input(body, context="email_body")
+        if not is_safe_body:
+            return error(f"Invalid body content: {reason_body}", "SECURITY_VIOLATION", 400)
+            
+        subject = sanitize_text(subject)
+        body = sanitize_text(body)
+            
         if len(subject) > 500:
             return error("Subject exceeds maximum length of 500 characters", "EMAIL_SERVICE_ERROR", 400)
         if len(body) > 10000:
@@ -195,6 +210,21 @@ class BulkEmail(Resource):
         
         if not isinstance(recipients, list) or not recipients or not subject or not body:
             return error("Missing required fields: to, subject, and body are required", "EMAIL_SERVICE_ERROR", 400)
+            
+        # Sanitization and Validation
+        from app.utils.sanitization import sanitize_text, validate_safe_input
+        
+        is_safe_subj, reason_subj = validate_safe_input(subject, context="bulk_email_subject")
+        if not is_safe_subj:
+            return error(f"Invalid subject content: {reason_subj}", "SECURITY_VIOLATION", 400)
+            
+        is_safe_body, reason_body = validate_safe_input(body, context="bulk_email_body")
+        if not is_safe_body:
+            return error(f"Invalid body content: {reason_body}", "SECURITY_VIOLATION", 400)
+            
+        subject = sanitize_text(subject)
+        body = sanitize_text(body)
+            
         if len(subject) > 500:
             return error("Subject exceeds maximum length of 500 characters", "EMAIL_SERVICE_ERROR", 400)
         if len(body) > 10000:

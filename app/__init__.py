@@ -9,6 +9,7 @@ from app.routes.v1.sms_admin_routes import sms_admin_bp
 from app.routes.v1.email_admin_routes import email_admin_bp
 from app.routes.v1.maintenance_routes import maintenance_bp
 from app.extensions import db, limiter, init_logging
+from app.middleware.security_headers import add_security_headers
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import logging
 import uuid
@@ -24,6 +25,21 @@ def create_app(config_class=None):
         env = os.getenv('APP_ENV', 'development').lower()
         config_class = ProductionConfig if env == 'production' else DevelopmentConfig
     app.config.from_object(config_class)
+
+    # Apply security headers middleware
+    add_security_headers(app)
+
+    # CSRF Protection
+    # Exempt API blueprints as they use Bearer tokens
+    from flask_wtf.csrf import CSRFProtect
+    csrf = CSRFProtect(app)
+    csrf.exempt(sms_bp)
+    csrf.exempt(mail_bp)
+    csrf.exempt(cdac_bp)
+    csrf.exempt(ehospital_bp)
+    csrf.exempt(sms_admin_bp)
+    csrf.exempt(email_admin_bp)
+    csrf.exempt(maintenance_bp)
 
     # Custom CORS handling for IP range
     # @app.after_request

@@ -82,8 +82,9 @@ class SMSMessage(db.Model):  # type: ignore
         self.message = fernet.encrypt(message.encode()).decode()
 
         # Audit log
+        # PII Protection: Do not log the actual phone number in plain text
         logging.getLogger('audit_logger').info(
-            f"Created SMSMessage: uuid={self.uuid}, to={to}")
+            f"Created SMSMessage: uuid={self.uuid}")
 
     def as_dict(self):
         fernet = None

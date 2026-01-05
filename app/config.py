@@ -1,13 +1,40 @@
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 class Config:
-	# Core
-	SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
+	# Core - Generate strong secret if not provided
+	_secret_key = os.getenv('SECRET_KEY')
+	if not _secret_key or _secret_key == 'change-me':
+		# Generate a strong random secret key
+		_secret_key = secrets.token_hex(32)
+		# In production, this should fail-fast instead
+		if os.getenv('APP_ENV', 'development').lower() == 'production':
+			raise ValueError(
+				"SECRET_KEY must be set in production environment. "
+				"Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+			)
+	SECRET_KEY = _secret_key
 	DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+	# Security: Session configuration
+	SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'  # HTTPS only
+	SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+	SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+	PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
+	
+	# Security: Request size limits (10MB default, prevents DoS)
+	MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 10 * 1024 * 1024))
+	
+	# Security: Content Security Policy (can be customized)
+	CONTENT_SECURITY_POLICY = os.getenv('CONTENT_SECURITY_POLICY', 
+		"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+		"img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+		"frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	)
 
 	# Database (default to in-memory SQLite if none provided)
 	SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///:memory:')
@@ -23,7 +50,9 @@ class Config:
 	CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 
 	# SMS API key (for potential auth decorator) and provider config
-	SMS_API_KEY = os.getenv('SMS_API_KEY', 'your-sms-api-key')
+	SMS_API_KEY = os.getenv('SMS_API_KEY')
+	if not SMS_API_KEY and os.getenv('APP_ENV', 'development').lower() == 'production':
+		raise ValueError("SMS_API_KEY must be set in production environment")
 
 	# OTP / SOAP gateway credentials (used by sms_service)
 	OTP_USERNAME = os.getenv('OTP_USERNAME')
@@ -34,22 +63,35 @@ class Config:
 	OTP_FLAG = os.getenv('OTP_FLAG', 'True') == 'True'  # enable real sending by default if configured
 	LOG_RETENTION_MONTHS = int(os.getenv('LOG_RETENTION_MONTHS', 8))
 	TRACE_ENABLED = os.getenv('TRACE_ENABLED', 'False') == 'True'
-	ADMIN_API_KEY = os.getenv('ADMIN_API_KEY', 'your-admin-api-key')
+	
+	# Admin API key - must be set in production
+	ADMIN_API_KEY = os.getenv('ADMIN_API_KEY')
+	if not ADMIN_API_KEY and os.getenv('APP_ENV', 'development').lower() == 'production':
+		raise ValueError("ADMIN_API_KEY must be set in production environment")
 
-	# Encryption key for sensitive data
-	ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '0123456789abcdef0123456789abcdef')
+	# Encryption key for sensitive data - MUST be set, no default
+	ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+	if not ENCRYPTION_KEY:
+		if os.getenv('APP_ENV', 'development').lower() == 'production':
+			raise ValueError(
+				"ENCRYPTION_KEY must be set in production environment. "
+				"Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+			)
+		else:
+			# Development only - generate temporary key
+			ENCRYPTION_KEY = secrets.token_hex(32)
 
 	# CDAC API configuration
 	CDAC_SERVER = os.getenv('CDAC_SERVER', 'https://example-cdac-api.com')
-	CDAC_AUTH_BEARER = os.getenv('CDAC_AUTH_BEARER', 'your-cdac-auth-bearer-token')
+	CDAC_AUTH_BEARER = os.getenv('CDAC_AUTH_BEARER')
 	# Allow access to CDAC API (can be set to False to disable)
 	CAN_ACCESS_CDAC = os.getenv('CAN_ACCESS_CDAC', 'True') == 'True'
  
 	# eHospital API configuration
 	EHOSPITAL_INIT_URL = os.getenv('EHOSPITAL_INIT_URL', 'https://example-ehospital-api.com/init')
 	EHOSPITAL_FETCH_PATIENT_URL = os.getenv('EHOSPITAL_FETCH_PATIENT_URL', 'https://example-ehospital-api.com/fetchPatientFullDetails')
-	EHOSPITAL_USERNAME = os.getenv('EHOSPITAL_USERNAME', 'your-ehospital-username')
-	EHOSPITAL_PASSWORD = os.getenv('EHOSPITAL_PASSWORD', 'your-ehospital-password')
+	EHOSPITAL_USERNAME = os.getenv('EHOSPITAL_USERNAME')
+	EHOSPITAL_PASSWORD = os.getenv('EHOSPITAL_PASSWORD')
 	EHOSPITAL_HOSPITAL_ID = os.getenv('EHOSPITAL_HOSPITAL_ID', '1')
  
  
@@ -66,7 +108,13 @@ class Config:
 
 class DevelopmentConfig(Config):
 	DEBUG = True
+	# Development can have relaxed session security for localhost
+	SESSION_COOKIE_SECURE = False
 
 
 class ProductionConfig(Config):
 	DEBUG = False
+	# Production must have secure sessions
+	SESSION_COOKIE_SECURE = True
+	# Enforce HTTPS
+	PREFERRED_URL_SCHEME = 'https'

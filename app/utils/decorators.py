@@ -68,19 +68,18 @@ def require_bearer_and_log(route_func):
         # Token format validation (simple: length, chars, not default)
         import re
         if not token or token != expected_token:
-            logger.warning(f"Malformed token for {ip} on {request.path} there")
+            logger.warning(f"Invalid token for {ip} on {request.path}")
             audit_logger.warning(
-                f"Malformed token: ip={ip}, path={request.path}, token={token} expected_token={expected_token}")
+                f"Authentication failed: ip={ip}, path={request.path}, reason=invalid_token")
             return error("Malformed token", "UNAUTHORIZED", 401)
         # Replay protection (simple: nonce in token, not reused)
         nonce = request.headers.get('X-Nonce')
         if nonce:
-            if not hasattr(current_app, 'used_nonces'): current_app.used_nonces = set()
-            if nonce in current_app.used_nonces:
+            from app.utils.nonce_store import nonce_store
+            if not nonce_store.check_and_set(nonce):
                 logger.warning(f"Replay attack detected for {ip} nonce={nonce}")
                 audit_logger.warning(f"Replay attack: ip={ip}, nonce={nonce}, path={request.path}")
                 return error("Replay detected", "REPLAY_ATTACK", 403)
-            current_app.used_nonces.add(nonce)
         # RBAC (simple: X-Role header)
         role = request.headers.get('X-Role', 'user')
         allowed_roles = current_app.config.get('ALLOWED_ROLES', ['user', 'admin'])
@@ -91,11 +90,11 @@ def require_bearer_and_log(route_func):
         # API key check
         if token != expected_token:
             logger.warning(f"Unauthorized access attempt to {request.path} from {ip}")
-            audit_logger.warning(f"Unauthorized: ip={ip}, path={request.path}, token={token}")
+            audit_logger.warning(f"Unauthorized: ip={ip}, path={request.path}, reason=token_mismatch")
             return error("Unauthorized", "UNAUTHORIZED", 401)
-        # Log request metadata
+        # Log request metadata (NO TOKENS)
         logger.info(f"Authorized access to {request.path} from {ip} user_agent={request.headers.get('User-Agent')} role={role}")
-        audit_logger.info(f"Access granted: ip={ip}, path={request.path}, user_agent={request.headers.get('User-Agent')}, role={role}, nonce={nonce}")
+        audit_logger.info(f"Access granted: ip={ip}, path={request.path}, user_agent={request.headers.get('User-Agent')}, role={role}, has_nonce={bool(nonce)}")
         return route_func(*args, **kwargs)
     return wrapper
 
@@ -130,18 +129,17 @@ def require_admin_bearer_and_log(route_func):
             return error("Server misconfiguration", "SERVER_ERROR", 500)
         import re
         if not token or token != expected_token:
-            logger.warning(f"Malformed admin token for {ip} on {request.path} here.")
-            audit_logger.warning(f"Malformed admin token: ip={ip}, path={request.path}, token={token} here.")
+            logger.warning(f"Invalid admin token for {ip} on {request.path}")
+            audit_logger.warning(f"Admin authentication failed: ip={ip}, path={request.path}, reason=invalid_token")
             return error("Malformed token", "UNAUTHORIZED", 401)
         # Replay protection
         nonce = request.headers.get('X-Nonce')
         if nonce:
-            if not hasattr(current_app, 'used_admin_nonces'): current_app.used_admin_nonces = set()
-            if nonce in current_app.used_admin_nonces:
+            from app.utils.nonce_store import nonce_store
+            if not nonce_store.check_and_set(nonce):
                 logger.warning(f"Admin replay attack detected for {ip} nonce={nonce}")
                 audit_logger.warning(f"Admin replay attack: ip={ip}, nonce={nonce}, path={request.path}")
                 return error("Replay detected", "REPLAY_ATTACK", 403)
-            current_app.used_admin_nonces.add(nonce)
         # RBAC (require admin role)
         role = request.headers.get('X-Role', 'user')
         if role != 'admin':
@@ -150,10 +148,10 @@ def require_admin_bearer_and_log(route_func):
             return error("Forbidden", "FORBIDDEN", 403)
         if token != expected_token:
             logger.warning(f"Unauthorized admin access attempt to {request.path} from {ip}")
-            audit_logger.warning(f"Unauthorized admin: ip={ip}, path={request.path}, token={token}")
+            audit_logger.warning(f"Unauthorized admin: ip={ip}, path={request.path}, reason=token_mismatch")
             return error("Unauthorized", "UNAUTHORIZED", 401)
-        # Log request metadata and audit
+        # Log request metadata and audit (NO TOKENS)
         logger.info(f"Admin access to {request.path} from {ip} user_agent={request.headers.get('User-Agent')} role={role}")
-        audit_logger.info(f"Admin access granted: ip={ip}, path={request.path}, user_agent={request.headers.get('User-Agent')}, role={role}, nonce={nonce}")
+        audit_logger.info(f"Admin access granted: ip={ip}, path={request.path}, user_agent={request.headers.get('User-Agent')}, role={role}, has_nonce={bool(nonce)}")
         return route_func(*args, **kwargs)
     return wrapper

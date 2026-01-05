@@ -72,6 +72,16 @@ class SingleSMS(Resource):
         
         if not mobile or not message:
             return error("Missing required fields: mobile and message are required", "SMS_SERVICE_ERROR", 400)
+            
+        # Sanitization and Validation
+        from app.utils.sanitization import sanitize_text, validate_safe_input
+        # Validate first to reject malicious content
+        is_safe, reason = validate_safe_input(message, context="sms_message")
+        if not is_safe:
+            return error(f"Invalid message content: {reason}", "SECURITY_VIOLATION", 400)
+            
+        message = sanitize_text(message)
+            
         if len(message) > 500:
             return error("Message exceeds maximum length of 500 characters", "SMS_SERVICE_ERROR", 400)
         if not _validate_number(mobile):
@@ -172,6 +182,16 @@ class BulkSMS(Resource):
         
         if not isinstance(mobiles, list) or not mobiles or not message:
             return error("Missing required fields: mobiles and message are required", "SMS_SERVICE_ERROR", 400)
+            
+        # Sanitization and Validation
+        from app.utils.sanitization import sanitize_text, validate_safe_input
+        # Validate first to reject malicious content
+        is_safe, reason = validate_safe_input(message, context="bulk_sms_message")
+        if not is_safe:
+            return error(f"Invalid message content: {reason}", "SECURITY_VIOLATION", 400)
+            
+        message = sanitize_text(message)
+            
         if len(message) > 500:
             return error("Message exceeds maximum length of 500 characters", "SMS_SERVICE_ERROR", 400)
         if len(mobiles) > 200:  # Max 200 in bulk request
@@ -288,13 +308,20 @@ class SMSHealth(Resource):
             if current_app.config.get('OTP_FLAG', True):
                 if current_app.config.get('OTP_SERVER') and current_app.config.get('OTP_USERNAME'):
                     logging.getLogger('app').info("Direct health check: configuration OK")
-                    status = send_sms("9899378106", "Health Check Test")
-                    if status == 200:
-                        logging.getLogger('app').info("Direct health check: SMS sent successfully")
-                        return success("SMS service is configured and ready", {"health": "healthy", "configured": True})
+                    # Use configured test number or skip actual sending
+                    test_number = current_app.config.get('HEALTH_CHECK_TEST_NUMBER')
+                    if test_number:
+                        status = send_sms(test_number, "Health Check Test")
+                        if status == 200:
+                            logging.getLogger('app').info("Direct health check: SMS sent successfully")
+                            return success("SMS service is configured and ready", {"health": "healthy", "configured": True})
+                        else:
+                            logging.getLogger('app').error(f"Direct health check: SMS send failed with status {status}")
+                            return error("SMS service health check failed", "SMS_SERVICE_UNHEALTHY", 503)
                     else:
-                        logging.getLogger('app').error(f"Direct health check: SMS send failed with status {status}")
-                        return error("SMS service health check failed", "SMS_SERVICE_UNHEALTHY", 503)    
+                        # Configuration check only, no actual SMS sending
+                        logging.getLogger('app').info("Direct health check: configuration verified (no test send)")
+                        return success("SMS service is configured", {"health": "healthy", "configured": True, "test_send": False})
                 else:
                     logging.getLogger('app').error("Direct health check: missing configuration")
                     return error("SMS service configuration missing", "SMS_SERVICE_UNHEALTHY", 503)

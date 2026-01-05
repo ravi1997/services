@@ -90,8 +90,9 @@ class EmailMessage(db.Model):  # type: ignore
         self.body = fernet.encrypt(body.encode()).decode()
 
         # Audit log
+        # PII Protection: Do not log the actual email in plain text
         logging.getLogger('audit_logger').info(
-            f"Created EmailMessage: uuid={self.uuid}, to={to}")
+            f"Created EmailMessage: uuid={self.uuid}")
 
     def as_dict(self):
         fernet = None
