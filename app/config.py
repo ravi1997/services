@@ -107,6 +107,19 @@ class Config:
 
 	HEALTH_CHECK_TEST_NUMBER = os.getenv('HEALTH_CHECK_TEST_NUMBER', '9876543210')
 
+	# IP Allowlisting
+	# Parse comma-separated lists from env, or use defaults
+	ALLOWED_IP_PREFIXES = tuple(
+		p.strip() for p in os.getenv('ALLOWED_IP_PREFIXES', '192.168.8.').split(',') if p.strip()
+	)
+	
+	ALLOWED_IPS = set(
+		ip.strip() for ip in os.getenv('ALLOWED_IPS', 
+			'123.252.211.122,45.64.84.98,35.207.200.220,35.207.210.89'
+		).split(',') if ip.strip()
+	)
+
+
 
 
 class DevelopmentConfig(Config):

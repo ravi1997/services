@@ -30,7 +30,9 @@ def create_app(config_class=None):
     add_security_headers(app)
 
     # CSRF Protection
-    # Exempt API blueprints as they use Bearer tokens
+    # NOTE: This application functions primarily as a stateless API using Bearer tokens.
+    # We use CSRFProtect for any potential cookies/future HTML views, but we explicitly
+    # exempt the API blueprints which do not use session cookies for authentication.
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
     csrf.exempt(sms_bp)
@@ -40,32 +42,6 @@ def create_app(config_class=None):
     csrf.exempt(sms_admin_bp)
     csrf.exempt(email_admin_bp)
     csrf.exempt(maintenance_bp)
-
-    # Custom CORS handling for IP range
-    # @app.after_request
-    # def after_request(response):
-    #     # Check if the request is from an allowed IP range
-    #     client_ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-    #     if client_ip.startswith('192.168.14.'):
-    #         response.headers.add('Access-Control-Allow-Origin', '*')
-    #         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-ID,Idempotency-Key,X-Nonce,X-Role')
-    #         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    #     return response
-
-
-    # -----------------------------
-    # Allowed IPs / CIDRs
-    # -----------------------------
-    ALLOWED_IP_PREFIXES = (
-        "192.168.8.",
-    )
-
-    ALLOWED_IPS = {
-        "123.252.211.122",  # Opal Office
-        "45.64.84.98",      # Opal Office
-        "35.207.200.220",   # Aarogyam Instance (NAT)
-        "35.207.210.89",    # TVAK Instance (NAT)
-    }
 
     def get_client_ip():
         """
@@ -88,12 +64,15 @@ def create_app(config_class=None):
         client_ip = get_client_ip()
 
         allowed = (
-            client_ip in ALLOWED_IPS
-            or any(client_ip.startswith(prefix) for prefix in ALLOWED_IP_PREFIXES)
+            client_ip in app.config['ALLOWED_IPS']
+            or any(client_ip.startswith(prefix) for prefix in app.config['ALLOWED_IP_PREFIXES'])
         )
 
         if allowed:
-            response.headers["Access-Control-Allow-Origin"] = "*"
+            # Reflect the Origin header if validated by IP, which is safer than '*'
+            # This allows the specific client to interact while maintaining control via IP allowlist.
+            origin = request.headers.get('Origin')
+            response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
             response.headers["Access-Control-Allow-Headers"] = (
                 "Content-Type, Authorization, X-Request-ID, "
                 "Idempotency-Key, X-Nonce, X-Role"

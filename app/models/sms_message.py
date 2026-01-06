@@ -8,11 +8,18 @@ from cryptography.fernet import Fernet
 # ---------- Safe Fernet helper ----------
 
 
+# Cache the fernet instance
+_FERNET_CACHE = None
+
 def get_fernet() -> Fernet:
     """
-    Lazily create a Fernet instance from ENCRYPTION_KEY.
+    Lazily create and cache a Fernet instance from ENCRYPTION_KEY.
     Raises RuntimeError with a clear message if missing or invalid.
     """
+    global _FERNET_CACHE
+    if _FERNET_CACHE:
+        return _FERNET_CACHE
+        
     key = os.getenv("ENCRYPTION_KEY")
     if not key:
         raise RuntimeError(
@@ -23,7 +30,8 @@ def get_fernet() -> Fernet:
     if isinstance(key, str):
         key = key.strip().encode()
     try:
-        return Fernet(key)
+        _FERNET_CACHE = Fernet(key)
+        return _FERNET_CACHE
     except Exception as e:
         raise RuntimeError(
             "Invalid ENCRYPTION_KEY: must be a URL-safe base64-encoded 32-byte key "

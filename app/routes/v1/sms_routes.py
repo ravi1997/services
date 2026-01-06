@@ -75,7 +75,6 @@ class SingleSMS(Resource):
             
         # Sanitization and Validation
         from app.utils.sanitization import sanitize_text, validate_safe_input
-        # Validate first to reject malicious content
         is_safe, reason = validate_safe_input(message, context="sms_message")
         if not is_safe:
             return error(f"Invalid message content: {reason}", "SECURITY_VIOLATION", 400)
@@ -88,86 +87,20 @@ class SingleSMS(Resource):
             return error("Invalid phone number format", "SMS_SERVICE_ERROR", 400)
         
         idempotency_key = request.headers.get('Idempotency-Key')
-        if idempotency_key:
-            existing = SMSMessage.query.filter_by(idempotency_key=idempotency_key).first()
-            if existing:
-                logging.getLogger('app').info(f"Idempotent request: SMS already processed: {idempotency_key}")
-                return success("SMS already processed", existing.as_dict())
+        
+        from app.utils.sms_workflow import process_single_sms, SMSWorkflowError
         
         try:
-            # Create record within a transaction to ensure a consistent id is available
-            record = SMSMessage(to=mobile, message=message, status='queued', idempotency_key=idempotency_key, uuid=str(uuid.uuid4()))
-            db.session.add(record)
-            db.session.commit()  # create the row so we have an id
-        except ValueError as e:
-            # Handle validation errors from SMSMessage constructor
-            db.session.rollback()
-            logging.getLogger('error').error(f"SMS validation error: {str(e)}")
-            return error(f"Invalid SMS data: {str(e)}", "SMS_SERVICE_ERROR", 400)
+            result = process_single_sms(mobile, message, idempotency_key)
+            # Check if this was an existing idempotent return or a new success
+            msg = "SMS already processed" if idempotency_key and result.get('status') == 'sent' and 'created_at' in result else "SMS processed"
+            return success(msg, result)
+        except SMSWorkflowError as e:
+            return error(str(e), e.error_code, e.http_code)
         except Exception as e:
-            # Handle any other database error
-            db.session.rollback()
-            logging.getLogger('error').error(f"Database error when creating SMS record: {str(e)}")
+            logging.getLogger('error').error(f"Unexpected error in SingleSMS: {str(e)}")
             return error("Internal server error", "SMS_SERVICE_ERROR", 500)
 
-        # Add to queue for processing
-        celery = getattr(current_app, 'celery', None)
-        if celery:
-            try:
-                # Add to queue with the process_single_sms task
-                task = add_to_queue_task.delay('process_single_sms', record.id, None)
-                
-                # Update the record to store the task ID (we'll use a different approach since Celery returns AsyncResult)
-                with db.session.begin():
-                    row = db.session.execute(
-                        select(SMSMessage).where(SMSMessage.id == record.id).with_for_update()
-                    ).scalar_one()
-                    # We don't have a direct task ID here, but we'll update status
-                    row.task_id = task.id if hasattr(task, 'id') else str(uuid.uuid4())[:16]
-                
-                sms_queued_counter.inc()
-                logging.getLogger('sms').info(f"Single SMS queued for {mobile}")
-                return success("SMS queued for processing", record.as_dict())
-            except Exception as e:
-                logging.getLogger('error').error(f"Error queuing SMS task: {str(e)}")
-                # Fallback to direct sending if queueing fails
-                from app.utils.sms_util import send_single_sms_util
-                status = send_single_sms_util(mobile, message)
-                
-                # Update status in DB
-                with db.session.begin():
-                    row = db.session.execute(
-                        select(SMSMessage).where(SMSMessage.id == record.id).with_for_update()
-                    ).scalar_one()
-                    if status[0] == 200:
-                        row.status = 'sent'
-                        sms_sent_counter.inc()
-                        logging.getLogger('sms').info(f"Single SMS sent directly to {mobile}")
-                        return success("SMS sent successfully", row.as_dict())
-                    else:
-                        row.status = 'failed'
-                        sms_failed_counter.inc()
-                        logging.getLogger('sms').error(f"Single SMS failed to {mobile}, status: {status}")
-                        return error("Failed to send SMS", "SMS_SERVICE_ERROR", 400)
-        else:
-            # Direct send if no Celery
-            from app.utils.sms_util import send_single_sms_util
-            status = send_single_sms_util(mobile, message)
-            
-            with db.session.begin():
-                row = db.session.execute(
-                    select(SMSMessage).where(SMSMessage.id == record.id).with_for_update()
-                ).scalar_one()
-                if status[0] == 200:
-                    row.status = 'sent'
-                    sms_sent_counter.inc()
-                    logging.getLogger('sms').info(f"Single SMS sent directly to {mobile}")
-                    return success("SMS sent successfully", row.as_dict())
-                else:
-                    row.status = 'failed'
-                    sms_failed_counter.inc()
-                    logging.getLogger('sms').error(f"Single SMS failed to {mobile}, status: {status}")
-                    return error("Failed to send SMS", "SMS_SERVICE_ERROR", 400)
 
 @api.route('/bulk')
 class BulkSMS(Resource):
@@ -185,7 +118,6 @@ class BulkSMS(Resource):
             
         # Sanitization and Validation
         from app.utils.sanitization import sanitize_text, validate_safe_input
-        # Validate first to reject malicious content
         is_safe, reason = validate_safe_input(message, context="bulk_sms_message")
         if not is_safe:
             return error(f"Invalid message content: {reason}", "SECURITY_VIOLATION", 400)
@@ -209,69 +141,18 @@ class BulkSMS(Resource):
         successes = []
         failures = []
         
+        from app.utils.sms_workflow import process_single_sms, SMSWorkflowError
+        
         for n in cleaned:
             try:
-                record = SMSMessage(to=n, message=message, status='queued', uuid=str(uuid.uuid4()))
-                db.session.add(record)
-                db.session.flush()  # Use flush to get ID without committing
-            except ValueError as e:
-                # Handle validation error from SMSMessage constructor
-                db.session.rollback()
+                # We process each one individually using the workflow
+                # This explicitly trades batch performance for code reuse and safety
+                record = process_single_sms(n, message, idempotency_key=None)
+                successes.append({'mobile': n, 'record_id': record.get('id'), 'status': 'queued'})
+            except SMSWorkflowError as e:
                 failures.append({'mobile': n, 'error': str(e)})
-                continue
             except Exception as e:
-                # Handle any other database error
-                db.session.rollback()
-                failures.append({'mobile': n, 'error': 'Database error'})
-                continue
-            
-            # Add to queue for processing
-            celery = getattr(current_app, 'celery', None)
-            if celery:
-                try:
-                    # Add to queue with the process_single_sms task for each record
-                    task = add_to_queue_task.delay('process_single_sms', record.id, None)
-                    
-                    # Update the record to store the task ID
-                    record.task_id = task.id if hasattr(task, 'id') else str(uuid.uuid4())[:16]
-                    sms_queued_counter.inc()
-                    successes.append({'mobile': n, 'record_id': record.id, 'task_queued': True})
-                except Exception as e:
-                    logging.getLogger('error').error(f"Error queuing SMS task for {n}: {str(e)}")
-                    # Fallback to direct sending if queueing fails
-                    from app.utils.sms_util import send_single_sms_util
-                    status = send_single_sms_util(n, message)
-                    if status[0] == 200:
-                        record.status = 'sent'
-                        sms_sent_counter.inc()
-                        successes.append({'mobile': n, 'record_id': record.id, 'direct_send': True})
-                        logging.getLogger('sms').info(f"Bulk SMS sent directly to {n}")
-                    else:
-                        record.status = 'failed'
-                        sms_failed_counter.inc()
-                        failures.append({'mobile': n, 'record_id': record.id, 'status_code': status[0]})
-                        logging.getLogger('sms').error(f"Bulk SMS failed to {n}, status: {status}")
-            else:
-                # Direct send if no Celery
-                from app.utils.sms_util import send_single_sms_util
-                status = send_single_sms_util(n, message)
-                if status[0] == 200:
-                    record.status = 'sent'
-                    sms_sent_counter.inc()
-                    successes.append({'mobile': n, 'record_id': record.id, 'direct_send': True})
-                    logging.getLogger('sms').info(f"Bulk SMS sent directly to {n}")
-                else:
-                    record.status = 'failed'
-                    sms_failed_counter.inc()
-                    failures.append({'mobile': n, 'record_id': record.id, 'status_code': status[0]})
-                    logging.getLogger('sms').error(f"Bulk SMS failed to {n}, status: {status}")
-        
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            logging.getLogger('error').error(f"Database error when committing bulk SMS records: {str(e)}")
-            return error("Internal server error during bulk SMS processing", "SMS_SERVICE_ERROR", 500)
+                failures.append({'mobile': n, 'error': "Internal processing error"})
         
         overall = 200 if successes and not failures else (207 if successes and failures else 400)
         payload = {"successes": successes, "failures": failures, "requested": len(cleaned)}
