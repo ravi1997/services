@@ -1,4 +1,4 @@
-from flask import Blueprint, request, current_app, g
+from flask import Blueprint, request, current_app as flask_current_app, g
 from flask_restx import Api, Resource, fields
 from app.utils.response import success, error
 from app.extensions import db, email_sent_counter, email_failed_counter, email_queued_counter
@@ -133,7 +133,7 @@ class SingleEmail(Resource):
             return error("Internal server error", "EMAIL_SERVICE_ERROR", 500)
 
         # Add to queue for processing
-        celery = getattr(current_app, 'celery', None)
+        celery = getattr(flask_current_app, 'celery', None)
         if celery:
             try:
                 # Add to queue with the send_and_record task (which handles database tracking)
@@ -261,7 +261,7 @@ class BulkEmail(Resource):
                 continue
             
             # Add to queue for processing
-            celery = getattr(current_app, 'celery', None)
+            celery = getattr(flask_current_app, 'celery', None)
             if celery:
                 try:
                     # Add to queue with the send_and_record task for each record
@@ -333,7 +333,7 @@ class EmailHealth(Resource):
             return error("Access denied from this IP", "ACCESS_DENIED", 403)
         
         # Process as high priority health check
-        celery = getattr(current_app, 'celery', None)
+        celery = getattr(flask_current_app, 'celery', None)
         if celery:
             # Run health check as a high priority task
             try:
@@ -347,8 +347,8 @@ class EmailHealth(Resource):
         else:
             # Direct health check if no Celery
             try:
-                from flask import current_app
-                if current_app.config.get('SMTP_SERVER') and current_app.config.get('SMTP_USERNAME'):
+                # Use the flask_current_app alias for configuration checks
+                if flask_current_app.config.get('SMTP_SERVER') and flask_current_app.config.get('SMTP_USERNAME'):
                     logging.getLogger('app').info("Direct health check: configuration OK")
                     return success("Email service is configured and ready", {"health": "healthy", "configured": True})
                 else:

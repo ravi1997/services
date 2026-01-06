@@ -11,16 +11,25 @@ sms_admin_bp = Blueprint('sms_admin', __name__)
 @sms_admin_bp.route('/messages', methods=['GET'])
 @require_admin_bearer_and_log
 def list_messages():
-    q = SMSMessage.query
+    # Only show records that aren't soft-deleted
+    q = SMSMessage.query.filter(SMSMessage.deleted_at == None)
+    
     status = request.args.get('status')
     to = request.args.get('to')
     since = request.args.get('since')
     until = request.args.get('until')
     order = request.args.get('order', 'desc')
+    
     if status:
         q = q.filter(SMSMessage.status == status)
+    
     if to:
-        q = q.filter(SMSMessage.to == to)
+        # WARNING: SMSMessage.to is encrypted. 
+        # Standard equality filtering will not work without a deterministic hash (blind index).
+        # We'll log a warning and return an error for now to avoid silent failures.
+        current_app.logger.warning(f"Filter by 'to' attempted on encrypted field. Query results may be inaccurate.")
+        return error("Searching by phone number is currently unsupported due to encryption", "NOT_SUPPORTED", 400)
+
     if since:
         try:
             dt = datetime.datetime.fromisoformat(since.replace('Z','+00:00'))
@@ -33,9 +42,17 @@ def list_messages():
             q = q.filter(SMSMessage.created_at <= dt)
         except ValueError:
             return error('Invalid until', 'BAD_PARAM', 400)
+            
     q = q.order_by(desc(SMSMessage.created_at) if order != 'asc' else asc(SMSMessage.created_at))
-    page = int(request.args.get('page', 1))
-    per_page = min(int(request.args.get('per_page', 20)), 100)
+    
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = min(int(request.args.get('per_page', 20)), 100)
+        if page < 1 or per_page < 1:
+            raise ValueError()
+    except ValueError:
+        return error('Invalid pagination parameters', 'BAD_PARAM', 400)
+
     pagination = q.paginate(page=page, per_page=per_page, error_out=False)
     data = {
         'items': [m.as_dict() for m in pagination.items],

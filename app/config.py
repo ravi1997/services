@@ -20,6 +20,8 @@ class Config:
 	SECRET_KEY = _secret_key
 	DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
+	ADMIN_API_KEY = os.getenv('ADMIN_API_KEY')
+
 	# Security: Session configuration
 	SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'  # HTTPS only
 	SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
