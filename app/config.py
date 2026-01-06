@@ -103,6 +103,7 @@ class Config:
 	SMTP_FROM_EMAIL = os.getenv('SMTP_FROM_EMAIL', 'noreply@example.com')
 	SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'True') == 'True'
 
+	HEALTH_CHECK_TEST_NUMBER = os.getenv('HEALTH_CHECK_TEST_NUMBER', '9876543210')
 
 
 

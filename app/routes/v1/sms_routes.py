@@ -240,8 +240,8 @@ class BulkSMS(Resource):
                     logging.getLogger('error').error(f"Error queuing SMS task for {n}: {str(e)}")
                     # Fallback to direct sending if queueing fails
                     from app.utils.sms_util import send_single_sms_util
-                    code = send_single_sms_util(n, message)
-                    if code == 200:
+                    status = send_single_sms_util(n, message)
+                    if status[0] == 200:
                         record.status = 'sent'
                         sms_sent_counter.inc()
                         successes.append({'mobile': n, 'record_id': record.id, 'direct_send': True})
@@ -249,13 +249,13 @@ class BulkSMS(Resource):
                     else:
                         record.status = 'failed'
                         sms_failed_counter.inc()
-                        failures.append({'mobile': n, 'record_id': record.id, 'status_code': code})
-                        logging.getLogger('sms').error(f"Bulk SMS failed to {n}, status: {code}")
+                        failures.append({'mobile': n, 'record_id': record.id, 'status_code': status[0]})
+                        logging.getLogger('sms').error(f"Bulk SMS failed to {n}, status: {status}")
             else:
                 # Direct send if no Celery
                 from app.utils.sms_util import send_single_sms_util
-                code = send_single_sms_util(n, message)
-                if code == 200:
+                status = send_single_sms_util(n, message)
+                if status[0] == 200:
                     record.status = 'sent'
                     sms_sent_counter.inc()
                     successes.append({'mobile': n, 'record_id': record.id, 'direct_send': True})
@@ -263,8 +263,8 @@ class BulkSMS(Resource):
                 else:
                     record.status = 'failed'
                     sms_failed_counter.inc()
-                    failures.append({'mobile': n, 'record_id': record.id, 'status_code': code})
-                    logging.getLogger('sms').error(f"Bulk SMS failed to {n}, status: {code}")
+                    failures.append({'mobile': n, 'record_id': record.id, 'status_code': status[0]})
+                    logging.getLogger('sms').error(f"Bulk SMS failed to {n}, status: {status}")
         
         try:
             db.session.commit()
