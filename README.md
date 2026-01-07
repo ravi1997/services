@@ -52,6 +52,8 @@ app/
 
 ### Installation
 
+#### Method 1: Standard (Python venv)
+
 1.  **Clone & Install**
     ```bash
     git clone <repository>
@@ -76,6 +78,16 @@ app/
     # Start Worker (Optional, for async)
     celery -A app.extensions.celery worker --loglevel=info
     ```
+
+#### Method 2: Docker (Fast Track)
+
+We use `uv` for lightning-fast builds.
+
+```bash
+chmod +x setup_uv_docker.sh
+./setup_uv_docker.sh
+```
+This will start the API on port `9000` and a Redis-backed Celery worker.
 
 ## 🛡️ Security Configuration
 

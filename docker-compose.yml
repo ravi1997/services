@@ -1,0 +1,33 @@
+services:
+  services-api:
+    build: .
+    container_name: services-api
+    env_file:
+      - .env.docker
+    ports:
+      - "9000:9000"
+    depends_on:
+      - redis
+    # DEV mode: bind mount so code changes reflect immediately (no rebuild needed)
+    volumes:
+      - .:/app
+    command: ["uv", "run", "python", "run.py"]
+    restart: unless-stopped
+
+  services-worker:
+    build: .
+    container_name: services-worker
+    env_file:
+      - .env.docker
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+    # Adjust celery app path if different in your project:
+    command: ["uv", "run", "celery", "-A", "app.extensions.celery", "worker", "--loglevel=info"]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: services-redis
+    restart: unless-stopped

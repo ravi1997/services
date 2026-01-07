@@ -10,11 +10,20 @@
 - **CSRF Documentation**: Clarified CSRF exemption logic for API blueprints to prevent future misconfiguration.
 - Maintained existing PII logging behavior as per user request (WONTFIX on PII leakage).
 
+## Infrastructure
+- **Dockerization**: Added `setup_uv_docker.sh` and `docker-compose.yml` for unified development environments.
+- **Package Management**: Adopted `uv` for faster dependency resolution and build times.
+- **Containerization**: Added `Dockerfile` optimized for `uv` caching.
+
 ## Documentation Updates
 - **New Architecture**: Split monolithic documentation into `API_USER_GUIDE.md` (for consumers) and `DEVELOPER_GUIDE.md` (for contributors).
 - **Enhanced Depth**: Added specific OS setup guides, Redis/Celery troubleshooting, and step-by-step route creation workflows.
 - **User Guide Improvements**: Added cURL examples, Authentication headers, and Rate Limit explanations.
 - **Project Structure**: Created `docs/` directory and updated `README.md` to serve as a clean entry point.
+
+## Agent Configuration
+- **Component Definition**: Added `agent/components/app.md` to define the Python/Flask stack context.
+- **Scope Resolution**: Updated `ACTIVE_SCOPE.md` to lock the agent to the `app` component.
 
 ## Components Changed
 - `app/config.py`
@@ -24,3 +33,7 @@
 - `app/utils/sms_workflow.py` (New)
 - `docs/` (Directory Created)
 - `README.md` (Revised)
+- `setup_uv_docker.sh` (New)
+- `docker-compose.yml` (New)
+- `agent/components/app.md` (New)
+- `agent/ACTIVE_SCOPE.md`

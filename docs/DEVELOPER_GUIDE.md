@@ -106,6 +106,38 @@ celery -A app.extensions.celery worker --loglevel=info
 
 ---
 
+## 🐳 Docker Development (Recommended)
+
+We provide a streamlined Docker setup using `uv` for fast dependency management.
+
+### Quick Start
+1.  **Run the Setup Script**:
+    ```bash
+    chmod +x setup_uv_docker.sh
+    ./setup_uv_docker.sh
+    ```
+    This script will:
+    *   Install `uv` (if missing).
+    *   Lock dependencies (`uv lock`).
+    *   Build Docker images (`api` and `worker`).
+    *   Start the stack with `redis`.
+
+2.  **Access**:
+    *   API: `http://localhost:9000`
+    *   Logs: `docker compose logs -f services-api`
+
+### Manual Commands
+If you prefer manual `docker compose` control:
+```bash
+# Build and start
+docker compose up -d --build
+
+# Stop
+docker compose down
+```
+
+---
+
 ## 💻 Common Workflows
 
 ### How to: Add a New API Route
